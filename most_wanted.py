@@ -1,9 +1,15 @@
 from urllib.parse import urljoin
 
+import pymongo
+
 from spider import BaseSpider, get_first, get_from_trees
 
+MONGO_HOST = 'localhost'
+MONGO_PORT = 27017
+MONGO_DB = 'crime_stoppers'
 
-class Pipeline:
+
+class FormatPipeline:
     def process_item(self, item, spider):
         suspect_descr = item.pop('suspect_descriptions', {})
         suspect_descr_formatted = {}
@@ -20,7 +26,27 @@ class Pipeline:
 
         item['suspect_descriptions'] = suspect_descr_formatted
 
-        print(item)
+        return item
+
+
+class MongoDBPipeline(object):
+
+    collection_name = 'most_wanted'
+
+    def __init__(self, host, port, db_name):
+        self.host = host
+        self.port = port
+        self.db_name = db_name
+
+    def open_spider(self, spider):
+        self.client = pymongo.MongoClient(self.host, self.port)
+        self.db = self.client[self.db_name]
+
+    def close_spider(self, spider):
+        self.client.close()
+
+    def process_item(self, item, spider):
+        self.db[self.collection_name].insert_one(dict(item))
         return item
 
 
@@ -28,20 +54,18 @@ class Spider(BaseSpider):
 
     urls = ['https://crimestoppers-uk.org/give-information/most-wanted']
 
-    pipelines = [Pipeline()]
-
     def parse(self, response, meta):
         appeal_links = response.html.xpath('//a[@class="tag text-red"]/@href')
         for appeal_link in appeal_links:
             page = urljoin(response.html.base_url, appeal_link)
             yield self.follow(page, callback=self.parse_appeal)
+            # more specific requests like POST method could be done like this
+            # yield FollowPage(requests.Request('POST', page), callback, meta=None)
 
-        '''
         next_page_links = response.html.xpath('//a[@class="page-link"]/@href')
         for next_page in next_page_links:
             page = urljoin(response.html.base_url, next_page)
             yield self.follow(page, callback=self.parse)
-        '''
 
     def parse_appeal(self, response, meta):
         item = {}
@@ -76,4 +100,13 @@ class Spider(BaseSpider):
 
 
 if __name__ == '__main__':
-    Spider().run()
+
+    mongo_pipeline = MongoDBPipeline(
+        host=MONGO_HOST,
+        port=MONGO_PORT,
+        db_name=MONGO_DB)
+
+    format_pipeline = FormatPipeline()
+
+    most_wanted = Spider(pipelines=[format_pipeline, mongo_pipeline])
+    most_wanted.run()

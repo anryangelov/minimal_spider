@@ -21,17 +21,17 @@ FollowPage = namedtuple('FollowPage', ('request', 'callback', 'meta'))
 class BaseSpider:
 
     urls = []
-    pipelines = []
 
     max_concurrent_requests = 32
     connect_timeout = 10
     read_timeout = 30
 
-    def __init__(self):
+    def __init__(self, pipelines=None):
         self._pool = ThreadPoolExecutor(
             max_workers=self.max_concurrent_requests)
         self._futures = {}
         self.attempted_urls = set()
+        self.pipelines = pipelines or []
 
     def parse(self):
         raise NotImplementedError(
@@ -73,7 +73,7 @@ class BaseSpider:
             if isinstance(result, dict):
                 for pipeline in self.pipelines:
                     if hasattr(pipeline, 'process_item'):
-                        pipeline.process_item(result, self)
+                        result = pipeline.process_item(result, self)
 
             elif isinstance(result, FollowPage):
                 self._submit_request(*result)
@@ -107,8 +107,8 @@ class BaseSpider:
         start = time.time()
 
         for p in self.pipelines:
-            if hasattr(p, 'start_spider'):
-                p.start_spider(self)
+            if hasattr(p, 'open_spider'):
+                p.open_spider(self)
 
         for url in self.urls:
             follow_page = self.follow(url, callback=self.parse)
@@ -116,8 +116,8 @@ class BaseSpider:
             self._handle_futures_result()
 
         for p in self.pipelines:
-            if hasattr(p, 'stop_spider'):
-                p.stop_spider(self)
+            if hasattr(p, 'close_spider'):
+                p.close_spider(self)
 
         end = time.time()
         logger.info(
