@@ -2,7 +2,7 @@ from urllib.parse import urljoin
 
 import pymongo
 
-from spider import BaseSpider, get_first, get_from_trees
+from base_spider import BaseSpider, get_first, get_from_trees
 
 MONGO_HOST = 'localhost'
 MONGO_PORT = 27017
