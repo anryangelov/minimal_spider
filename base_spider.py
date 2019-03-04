@@ -1,4 +1,3 @@
-
 from concurrent.futures import ThreadPoolExecutor
 from concurrent.futures import wait
 from concurrent.futures import FIRST_COMPLETED
@@ -90,7 +89,7 @@ class BaseSpider:
     def _handle_futures_result(self):
         while self._futures:
             done, not_done = wait(
-                self._futures, timeout=60, return_when=FIRST_COMPLETED)
+                self._futures, timeout=120, return_when=FIRST_COMPLETED)
             for future in done:
 
                 try:
@@ -126,6 +125,7 @@ class BaseSpider:
 
 
 def get_first(list_):
+    ''' if list empty return None '''
     return list_ and list_[0]
 
 

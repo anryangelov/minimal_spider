@@ -2,7 +2,7 @@ MONGO_HOST = 'localhost'
 MONGO_PORT = 27017
 MONGO_DB = 'crime_stoppers'
 
-# this used in more than file
+# those are used in more than one file
 crime_type = 'crime_type'
 crime_location = 'crime_location'
 suspect_name = 'suspect_name'
