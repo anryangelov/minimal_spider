@@ -1,0 +1,9 @@
+MONGO_HOST = 'localhost'
+MONGO_PORT = 27017
+MONGO_DB = 'crime_stoppers'
+
+# this used in more than file
+crime_type = 'crime_type'
+crime_location = 'crime_location'
+suspect_name = 'suspect_name'
+summary = 'summary'

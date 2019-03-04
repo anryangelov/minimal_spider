@@ -1,12 +1,8 @@
 from urllib.parse import urljoin
 
-import pymongo
-
+import constants
+from most_wanted_mongo import MWMongo
 from base_spider import BaseSpider, get_first, get_from_trees
-
-MONGO_HOST = 'localhost'
-MONGO_PORT = 27017
-MONGO_DB = 'crime_stoppers'
 
 
 class FormatPipeline:
@@ -26,27 +22,6 @@ class FormatPipeline:
 
         item['suspect_descriptions'] = suspect_descr_formatted
 
-        return item
-
-
-class MongoDBPipeline(object):
-
-    collection_name = 'most_wanted'
-
-    def __init__(self, host, port, db_name):
-        self.host = host
-        self.port = port
-        self.db_name = db_name
-
-    def open_spider(self, spider):
-        self.client = pymongo.MongoClient(self.host, self.port)
-        self.db = self.client[self.db_name]
-
-    def close_spider(self, spider):
-        self.client.close()
-
-    def process_item(self, item, spider):
-        self.db[self.collection_name].insert_one(dict(item))
         return item
 
 
@@ -74,15 +49,15 @@ class Spider(BaseSpider):
         item['URLphoto'] = get_first(response.html.xpath('//div[@class="boxshadow"]//img/@src'))
 
         slcrs = response.html.xpath('//div[@class="col-md-8"]/ul/li')
-        item['crime_type'] = get_from_trees(slcrs, './/*[.="Crime type:"]/following-sibling::text()[1]')
-        item['crime_location'] = get_from_trees(slcrs, './/*[.="Crime location:"]/following-sibling::text()[1]')
-        item['suspect_name'] = get_from_trees(slcrs, './/*[.="Suspect name:"]/following-sibling::text()[1]')
+        item[constants.crime_type] = get_from_trees(slcrs, './/*[.="Crime type:"]/following-sibling::text()[1]')
+        item[constants.crime_location] = get_from_trees(slcrs, './/*[.="Crime location:"]/following-sibling::text()[1]')
+        item[constants.suspect_name] = get_from_trees(slcrs, './/*[.="Suspect name:"]/following-sibling::text()[1]')
         item['nickname'] = get_from_trees(slcrs, './/*[.="Nickname:"]/following-sibling::text()[1]')
         item['number_of_people_involved'] = get_from_trees(slcrs, './/*[.="Number of people involved::"]/following-sibling::text()[1]')
         item['CS_reference'] = get_from_trees(slcrs, './/*[.="CS reference:"]/following-sibling::text()[1]')
         item['police_force'] = get_from_trees(slcrs, './/*[.="Police force"]/following-sibling::text()[1]')
 
-        item['summary'] = get_first(response.html.xpath('//h2[.="Summary"]/following-sibling::text()[1]'))
+        item[constants.summary] = get_first(response.html.xpath('//h2[.="Summary"]/following-sibling::text()[1]'))
         item['full_details'] = get_first(response.html.xpath('//h2[.="Full Details"]/following-sibling::text()[1]'))
 
         suspect_descriptions = {}
@@ -101,10 +76,10 @@ class Spider(BaseSpider):
 
 if __name__ == '__main__':
 
-    mongo_pipeline = MongoDBPipeline(
-        host=MONGO_HOST,
-        port=MONGO_PORT,
-        db_name=MONGO_DB)
+    mongo_pipeline = MWMongo(
+        host=constants.MONGO_HOST,
+        port=constants.MONGO_PORT,
+        db_name=constants.MONGO_DB)
 
     format_pipeline = FormatPipeline()
 
